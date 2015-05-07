@@ -2,16 +2,17 @@
 #include <functional>
 #include <iostream>
 #include <cmath>
+#include <functional>
 
 using namespace El;
 using namespace std::placeholders;
 
 
-template<class T>
-int rsvd_test_func(DistMatrix<T> &x, DistMatrix<T> &y, DistMatrix<T> *A){
+//template<class double>
+int rsvd_test_func(DistMatrix<double,VR,STAR> &x, DistMatrix<double,VR,STAR> &y, DistMatrix<double,VR,STAR> *A){
 
-	auto alpha = make_one<T>();
-	auto beta  = make_zero<T>();
+	auto alpha = make_one<double>();
+	auto beta  = make_zero<double>();
 
 	int N = A->Height();
 	Zeros(y,N,1);
@@ -20,11 +21,11 @@ int rsvd_test_func(DistMatrix<T> &x, DistMatrix<T> &y, DistMatrix<T> *A){
 
 }
 
-template<class T>
-int rsvd_test_t_func(DistMatrix<T> &x, DistMatrix<T> &y, DistMatrix<T> *At){
+//template<class double>
+int rsvd_test_t_func(DistMatrix<double,VR,STAR> &x, DistMatrix<double,VR,STAR> &y, DistMatrix<double,VR,STAR> *At){
 
-	auto alpha = make_one<T>();
-	auto beta  = make_zero<T>();
+	auto alpha = make_one<double>();
+	auto beta  = make_zero<double>();
 
 	int N = At->Width();
 	Zeros(y,N,1);
@@ -35,7 +36,7 @@ int rsvd_test_t_func(DistMatrix<T> &x, DistMatrix<T> &y, DistMatrix<T> *At){
 }
 
 
-void test(const int m, const int n, const int r){
+void test(const int m, const int n, const int r, const int l, const double d){
 
 	double alpha =1.0;
 	double beta =0.0;
@@ -48,11 +49,18 @@ void test(const int m, const int n, const int r){
 	DistMatrix<double,VR,STAR> L(g);
 	DistMatrix<double,VR,STAR> Rt(g);
 	DistMatrix<double,VR,STAR> T(g);
-	std::vector<double> d(min_mn);
-	for(int i=0;i<min_mn;i++){
-		d[i] = std::pow(.99,i);
-	}
-	Diagonal(D,d);
+
+
+	if(!mpi::Rank(comm)){
+		std::cout << "m: " << m << std::endl;
+		std::cout << "n: " << n << std::endl;
+		std::cout << "r: " << r << std::endl;
+		std::cout << "d: " << d << std::endl;
+	};
+
+	D.Resize(min_mn,1);
+	auto expfill = [&d]( Int i, Int j )->double{ return Pow(d,double(i)); };
+	IndexDependentFill( D, function<double(Int,Int)>(expfill) );
 
 	Gaussian(L,m,min_mn);
 	qr::ExplicitUnitary(L);
@@ -60,58 +68,95 @@ void test(const int m, const int n, const int r){
 	Gaussian(Rt,n,min_mn);
 	qr::ExplicitUnitary(Rt);
 
-	Zeros(T,m,min_mn);
+	//Zeros(T,m,min_mn);
 
-	Gemm(NORMAL,NORMAL,alpha,L,D,beta,T);
+	//Gemm(NORMAL,NORMAL,alpha,L,D,beta,T);
+	DiagonalScale(RIGHT,NORMAL,D,L);
 	Zeros(A,m,n);
-	Gemm(NORMAL,TRANSPOSE,alpha,T,Rt,beta,A);
+	Gemm(NORMAL,TRANSPOSE,alpha,L,Rt,beta,A);
 
 	auto A_sf  = std::bind(rsvd_test_func,_1,_2,&A);
 	auto At_sf = std::bind(rsvd_test_t_func,_1,_2,&A);
 
 	DistMatrix<double,VR,STAR> U(g);
 	DistMatrix<double,VR,STAR> S(g);
-	DistMatrix<double,VR,STAR> Vt(g);
+	DistMatrix<double,VR,STAR> V(g);
 
 	{
-		rsvd2(U,S,Vt,A_sf,At_sf,m,n,r);
 		if(!mpi::Rank(comm)) std::cout << "rsvd2" << std::endl;
+		rsvd2(U,S,V,A_sf,At_sf,m,n,r,l);
+
+
+		// check to see if the right and left singular matrices are orthogonal
+		
+		DistMatrix<double,VR,STAR> I(g);
+		DistMatrix<double,VR,STAR> UtU(g);
+		Zeros(UtU,r,r);
+		Gemm(ADJOINT,NORMAL,alpha,U,U,beta,UtU);
+		Identity(I,r,r);
+		Axpy(-1.0,I,UtU);
+		double ortho_diff = FrobeniusNorm(UtU)/FrobeniusNorm(I);
+		if(!mpi::Rank(comm)) std::cout << "Ortho diff: " << ortho_diff << std::endl;
+
+		DistMatrix<double,VR,STAR> VtV(g);
+		Zeros(VtV,r,r);
+		Gemm(ADJOINT,NORMAL,alpha,V,V,beta,VtV);
+		Axpy(-1.0,I,VtV);
+		ortho_diff = FrobeniusNorm(VtV)/FrobeniusNorm(I);
+		if(!mpi::Rank(comm)) std::cout << "Ortho diff: " << ortho_diff << std::endl;
+
+
 
 		// test that the factorization is good	
-		DistMatrix<double,VR,STAR> US(g);
-		DistMatrix<double,VR,STAR>	USVt(g);
+		DistMatrix<double,VR,STAR> USVt(g);
 
-		DistMatrix<double,VR,STAR> VSt(g);
-		DistMatrix<double,VR,STAR>	VStUt(g);
-
-		Zeros(US,m,r);
-		Gemm(NORMAL,NORMAL,alpha,U,S,beta,US);
+		DiagonalScale(RIGHT,NORMAL,S,U);
 
 		Zeros(USVt,m,n);
-		Gemm(NORMAL,NORMAL,alpha,US,Vt,beta,USVt);
+		Gemm(NORMAL,ADJOINT,alpha,U,V,beta,USVt);
 
 		Axpy(-1.0,A,USVt);
 
 		double ndiff = FrobeniusNorm(USVt)/FrobeniusNorm(A);
 		if(!mpi::Rank(comm)) std::cout << "Norm diff: " << ndiff << std::endl;
+
+
+
 	}
 
 	{
-		rsvd(U,S,Vt,A_sf,At_sf,m,n,r);
 		if(!mpi::Rank(comm)) std::cout << "rsvd" << std::endl;
+		rsvd(U,S,V,A_sf,At_sf,m,n,r,l);
+		
+
+		// check to see if the right and left singular matrices are orthogonal
+		DistMatrix<double,VR,STAR> I(g);
+		DistMatrix<double,VR,STAR> UtU(g);
+		Zeros(UtU,r,r);
+		Gemm(ADJOINT,NORMAL,alpha,U,U,beta,UtU);
+		Identity(I,r,r);
+		Axpy(-1.0,I,UtU);
+		double ortho_diff = FrobeniusNorm(UtU)/FrobeniusNorm(I);
+		if(!mpi::Rank(comm)) std::cout << "Ortho diff: " << ortho_diff << std::endl;
+
+		DistMatrix<double,VR,STAR> VtV(g);
+		Zeros(VtV,r,r);
+		Gemm(ADJOINT,NORMAL,alpha,V,V,beta,VtV);
+		Axpy(-1.0,I,VtV);
+		ortho_diff = FrobeniusNorm(VtV)/FrobeniusNorm(I);
+		if(!mpi::Rank(comm)) std::cout << "Ortho diff: " << ortho_diff << std::endl;
+
 
 		// test that the factorization is good	
 		DistMatrix<double,VR,STAR> US(g);
 		DistMatrix<double,VR,STAR>	USVt(g);
 
-		DistMatrix<double,VR,STAR> VSt(g);
-		DistMatrix<double,VR,STAR>	VStUt(g);
-
-		Zeros(US,m,r);
-		Gemm(NORMAL,NORMAL,alpha,U,S,beta,US);
+		//Zeros(US,m,r);
+		//Gemm(NORMAL,NORMAL,alpha,U,S,beta,US);
+		DiagonalScale(RIGHT,NORMAL,S,U);
 
 		Zeros(USVt,m,n);
-		Gemm(NORMAL,NORMAL,alpha,US,Vt,beta,USVt);
+		Gemm(NORMAL,ADJOINT,alpha,U,V,beta,USVt);
 
 		Axpy(-1.0,A,USVt);
 
@@ -122,23 +167,6 @@ void test(const int m, const int n, const int r){
 	return;
 
 }
-
-void test2(){
-
-	Grid g;
-	DistMatrix<double,VR,STAR> A(g);
-	DistMatrix<double,STAR,STAR> A2(g);
-	Gaussian(A,10,5);
-	Display(A,"rect");
-	A2 = A;
-	
-	A2.Resize(10*5,1);
-	A=A2;
-	Display(A,"vec");
-
-	return;
-}
-
 
 int main(int argc, char* argv[]){
 	Initialize(argc,argv);
@@ -146,13 +174,14 @@ int main(int argc, char* argv[]){
 	const int m = Input("--m","number of rows",100);
 	const int n = Input("--n","number of cols",200);
 	const int r = Input("--r","reduced rank",55);
+	const int l = Input("--l","oversampling parameter",20);
+	const double d = Input("--d","decay",0.75);
 	const double tol = Input("--tol","rsvd tolerance",0.05);
 
 	ProcessInput();
 	PrintInputReport();
 
-	test(m,n,r);
-	//test2();
+	test(m,n,r,l,d);
 	Finalize();
 
 }
