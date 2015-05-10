@@ -106,7 +106,7 @@ int rsvd_test_func(DistMatrix<double,VR,STAR> &x, DistMatrix<double,VR,STAR> &y,
 	MPI_Comm comm = elcomm.comm;
 	int rank;
 	MPI_Comm_rank(comm,&rank);
-	if(!rank) std::cout << "A" << std::endl;
+	//if(!rank) std::cout << "A" << std::endl;
 	auto alpha = make_one<double>();
 	auto beta  = make_zero<double>();
 
@@ -124,7 +124,7 @@ int rsvd_test_t_func(DistMatrix<double,VR,STAR> &x, DistMatrix<double,VR,STAR> &
 	MPI_Comm comm = elcomm.comm;
 	int rank;
 	MPI_Comm_rank(comm,&rank);
-	if(!rank) std::cout << "At" << std::endl;
+	//if(!rank) std::cout << "At" << std::endl;
 
 	auto alpha = make_one<double>();
 	auto beta  = make_zero<double>();
@@ -181,11 +181,11 @@ void test(const int m, const int n, const int k, int r, const int l, const int q
 	Zeros(A,m,n);
 	Gemm(NORMAL,ADJOINT,alpha,L_copy,R,beta,A);
 
-	//auto A_sf  = std::bind(rsvd_test_func,_1,_2,&A);
-	//auto At_sf = std::bind(rsvd_test_t_func,_1,_2,&A);
+	auto A_sf  = std::bind(rsvd_test_func,_1,_2,&A);
+	auto At_sf = std::bind(rsvd_test_t_func,_1,_2,&A);
 
-	auto A_sf  = std::bind(rsvd_test_func2,_1,_2,&L,&D,&R);
-	auto At_sf = std::bind(rsvd_test_t_func2,_1,_2,&L,&D,&R);
+	//auto A_sf  = std::bind(rsvd_test_func2,_1,_2,&L,&D,&R);
+	//auto At_sf = std::bind(rsvd_test_t_func2,_1,_2,&L,&D,&R);
 
 
 	DistMatrix<double,VR,STAR> U(g);
@@ -204,12 +204,19 @@ void test(const int m, const int n, const int k, int r, const int l, const int q
 		ctrl.adap=adap;
 		ctrl.orientation=orientation;
 
-		if(!mpi::Rank(comm)) std::cout << "rsvd" << std::endl;
-		double rsvd_start = mpi::Time();
-		rsvd::rsvd(U,S,V,A_sf,At_sf,ctrl);
-		double rsvd_time = mpi::Time() - rsvd_start;
-		r = ctrl.r;
-		if(!mpi::Rank(comm)) std::cout << "r="<< r << std::endl;
+		for(int i=0;i<10;i++){
+			if(!mpi::Rank(comm)) std::cout << "rsvd" << std::endl;
+			ctrl.r = r_orig;
+			double rsvd_start = mpi::Time();
+			rsvd::rsvd(U,S,V,A_sf,At_sf,ctrl);
+			double rsvd_time = mpi::Time() - rsvd_start;
+
+			double rsvd_time_max;
+			mpi::Reduce(&rsvd_time,&rsvd_time_max,1,mpi::MAX,0,comm);
+			if(!mpi::Rank(comm)) std::cout << "rsvd time" << rsvd_time_max << std::endl;
+			r = ctrl.r;
+			if(!mpi::Rank(comm)) std::cout << "r="<< r << std::endl;
+		}
 
 
 		r = ctrl.r;
@@ -249,9 +256,6 @@ void test(const int m, const int n, const int k, int r, const int l, const int q
 		}
 
 		// report the times
-		double rsvd_time_max;
-		mpi::Reduce(&rsvd_time,&rsvd_time_max,1,mpi::MAX,0,comm);
-		if(!mpi::Rank(comm)) std::cout << "rsvd time" << rsvd_time_max << std::endl;
 
 		// compare the singular values
 		D.Resize((r<exact_rank)?r:exact_rank,1);
