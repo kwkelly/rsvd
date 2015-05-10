@@ -120,9 +120,9 @@ void rsvd(DistMatrix<T,El::VR,El::STAR> &U, DistMatrix<T,El::VR,El::STAR> &s, Di
 				At(rw,Q_i);
 			}
 			for(int p=0;p<q;p++){ // power iterate
-				DistMatrix<T,El::VR,El::STAR> temp(n,1,g);
+				DistMatrix<T,El::VR,El::STAR> temp(m,1,g);
 				for(int i=R_old;i<R+l;i++){ // Apply A*
-					DistMatrix<T,El::VR,El::STAR> Y_i = View(Q, 0, i, m, 1);
+					DistMatrix<T,El::VR,El::STAR> Y_i = View(Q, 0, i, n, 1);
 					A(Y_i,temp);
 					At(temp,Y_i);
 				}
@@ -149,7 +149,7 @@ void rsvd(DistMatrix<T,El::VR,El::STAR> &U, DistMatrix<T,El::VR,El::STAR> &s, Di
 				Gemm(El::NORMAL,El::NORMAL,alpha,Q,C,beta,D);
 				Axpy(-1.0,D,Y);
 				Base<T> s_diff = TwoNormEstimate(Y);
-				err_est = s_diff/s_1;
+				err_est = std::pow(s_diff/s_1,1.0/(q+1));
 				//std::cout << err_est << std::endl;
 			}
 			R_old = R;
@@ -201,16 +201,13 @@ void rsvd(DistMatrix<T,El::VR,El::STAR> &U, DistMatrix<T,El::VR,El::STAR> &s, Di
 	/////////////////////////////
 	// ORIENTATION NORMAL
 	/////////////////////////////
-
 	if(orientation == NORMAL){ 
 		DistMatrix<T,El::VR,El::STAR> rw(g);
 		DistMatrix<T,El::VR,El::STAR> Q(g); // the projection of omega through A
-		//Zeros(Q,m,r+l);
 
 		do{
 			Q.Resize(m,R+l);
-			// apply A\Omega
-			for(int i=R_old;i<R+l;i++){
+			for(int i=R_old;i<R+l;i++){// apply A\Omega
 				Gaussian(rw, n, 1);
 				DistMatrix<T,El::VR,El::STAR> Y_i = View(Q, 0, i, m, 1);
 				A(rw,Y_i);
@@ -235,10 +232,8 @@ void rsvd(DistMatrix<T,El::VR,El::STAR> &U, DistMatrix<T,El::VR,El::STAR> &s, Di
 				// compute an error estimate
 				Base<T> s_1 = TwoNormEstimate(Y);
 				// compute  ||Y - QQ*Y||
-
 				DistMatrix<T,El::VR,El::STAR> C(R,R+l,g);
 				DistMatrix<T,El::VR,El::STAR> D(m,R+l,g);
-
 				Zeros(C,R,R+l);
 				Zeros(D,m,R+l);
 
@@ -246,7 +241,7 @@ void rsvd(DistMatrix<T,El::VR,El::STAR> &U, DistMatrix<T,El::VR,El::STAR> &s, Di
 				Gemm(El::NORMAL,El::NORMAL,alpha,Q,C,beta,D);
 				Axpy(-1.0,D,Y);
 				Base<T> s_diff = TwoNormEstimate(Y);
-				err_est = s_diff/s_1;
+				err_est = std::pow(s_diff/s_1,1.0/(q+1));
 				//std::cout << err_est << std::endl;
 			}
 			R_old = R;
@@ -255,6 +250,8 @@ void rsvd(DistMatrix<T,El::VR,El::STAR> &U, DistMatrix<T,El::VR,El::STAR> &s, Di
 			}
 		}
 		while(adap == rsvd::ADAP and err_est > tol);
+		std::cout << "R: " << R <<std::endl;
+		std::cout << "err: " << err_est <<std::endl;
 
 		DistMatrix<T,El::VR,El::STAR> AtQ(g);
 		//Zeros(AtQ,n,r);
