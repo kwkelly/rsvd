@@ -1,4 +1,5 @@
 #include "El.hpp"
+#include <numeric>
 #include "rsvd.hpp"
 
 using namespace El;
@@ -65,6 +66,7 @@ struct RSVDCtrl
 	int r=0; // desired rank for for fixed rank. If adaptive, then the min rank to use.
 	int l=0; // oversampling parameter
 	int q=0; // power iteration parameter
+	int max_sz = 0; // power iteration parameter
 	double tol=0.05;
 	Adaptive adap=FIXED;
 	Orientation orientation=NORMAL;
@@ -81,6 +83,7 @@ void rsvd(DistMatrix<T,El::VR,El::STAR> &U, DistMatrix<T,El::VR,El::STAR> &s, Di
 	int l=ctrl.l;
 	int r=ctrl.r;
 	int q=ctrl.q;
+	int max_sz = ctrl.max_sz;
 	double tol=ctrl.tol;
 	Orientation orientation=ctrl.orientation;
 	Adaptive adap=ctrl.adap;
@@ -111,26 +114,29 @@ void rsvd(DistMatrix<T,El::VR,El::STAR> &U, DistMatrix<T,El::VR,El::STAR> &s, Di
 	/////////////////////////////
 	if(orientation == ADJOINT){
 		DistMatrix<T,El::VR,El::STAR> rw(g);
-		DistMatrix<T,El::VR,El::STAR> Q(g);
+		DistMatrix<T,El::VR,El::STAR> Q(g); // the projection of omega through A
+		DistMatrix<T,El::VR,El::STAR> W(g); // the projection of omega through A
 
 		do{
-			Q.Resize(n,R+l);
+			W.Resize(m,max_sz+l);
+			auto Y = View(W, 0, 0, m, R+l);
 			for(int i=R_old;i<R+l;i++){ //project A*\Omega
 				Gaussian(rw, m, 1);
-				DistMatrix<T,El::VR,El::STAR> Q_i = View(Q, 0, i, n, 1);
-				At(rw,Q_i);
+				DistMatrix<T,El::VR,El::STAR> Y_i = View(Y, 0, i, n, 1);
+				At(rw,Y_i);
 			}
 			for(int p=0;p<q;p++){ // power iterate
 				DistMatrix<T,El::VR,El::STAR> temp(m,1,g);
 				for(int i=R_old;i<R+l;i++){ // Apply A*
-					DistMatrix<T,El::VR,El::STAR> Y_i = View(Q, 0, i, n, 1);
+					DistMatrix<T,El::VR,El::STAR> Y_i = View(Y, 0, i, n, 1);
 					A(Y_i,temp);
 					At(temp,Y_i);
 				}
 			}
 
 			if(adap == rsvd::FIXED){
-				DistMatrix<T,El::VR,El::STAR> temp1(g);
+				Copy(Y,Q);
+				DistMatrix<Base<T>,El::VR,El::STAR> temp1(g);
 				DistMatrix<T,El::VR,El::STAR> temp2(g);
 				SVD(Q, temp1, temp2);
 				//qr::ExplicitUnitary(Q);
@@ -138,8 +144,9 @@ void rsvd(DistMatrix<T,El::VR,El::STAR> &U, DistMatrix<T,El::VR,El::STAR> &s, Di
 				// Estimate the error if adaptivity is on, else we are done
 			}
 			else{
+				Copy(Y,Q);
 				DistMatrix<T,El::VR,El::STAR> Y = Q;
-				DistMatrix<T,El::VR,El::STAR> temp1(g);
+				DistMatrix<Base<T>,El::VR,El::STAR> temp1(g);
 				DistMatrix<T,El::VR,El::STAR> temp2(g);
 				SVD(Q, temp1, temp2);
 				//qr::ExplicitUnitary(Q);
@@ -162,12 +169,18 @@ void rsvd(DistMatrix<T,El::VR,El::STAR> &U, DistMatrix<T,El::VR,El::STAR> &s, Di
 			}
 			R_old = R;
 			if(err_est > tol){
-				R += inc_size;
+
+				if(R + inc_size < std::min(m,n)){
+					R += inc_size;
+				}
+				else{
+					R = std::min(m,n);
+				}
 			}
+
+		std::cout << "err: " << err_est <<std::endl;
 		}
 		while(adap == rsvd::ADAP and err_est > tol);
-		//std::cout << "R: " << R <<std::endl;
-		//std::cout << "err: " << err_est <<std::endl;
 
 		// Now Y is such that G* \approx QQ*G*.Thus we can compute GQ
 		// Compute it's SVD and then multiply by Q*, thus giving the approx 
@@ -212,39 +225,44 @@ void rsvd(DistMatrix<T,El::VR,El::STAR> &U, DistMatrix<T,El::VR,El::STAR> &s, Di
 	if(orientation == NORMAL){ 
 		DistMatrix<T,El::VR,El::STAR> rw(g);
 		DistMatrix<T,El::VR,El::STAR> Q(g); // the projection of omega through A
+		DistMatrix<T,El::VR,El::STAR> W(g); // the projection of omega through A
 
 		do{
-			Q.Resize(m,R+l);
+			W.Resize(m,max_sz+l);
+			auto Y = View(W, 0, 0, m, R+l);
+
 			for(int i=R_old;i<R+l;i++){// apply A\Omega
 				Gaussian(rw, n, 1);
-				DistMatrix<T,El::VR,El::STAR> Y_i = View(Q, 0, i, m, 1);
+				DistMatrix<T,El::VR,El::STAR> Y_i = View(Y, 0, i, m, 1);
 				A(rw,Y_i);
 			}
 			for(int p=0;p<q;p++){ // power iterate
 				DistMatrix<T,El::VR,El::STAR> temp(n,1,g);
 				for(int i=R_old;i<R+l;i++){ // Apply A*
-					DistMatrix<T,El::VR,El::STAR> Y_i = View(Q, 0, i, m, 1);
+					DistMatrix<T,El::VR,El::STAR> Y_i = View(Y, 0, i, m, 1);
 					At(Y_i,temp);
 					A(temp,Y_i);
 				}
 			}
 
 			if(adap == rsvd::FIXED){
-				DistMatrix<T,El::VR,El::STAR> temp1(g);
+				//Copy(Y,Q);
+				Q = View(Y,0,0,m,R+l);
+				DistMatrix<Base<T>,El::VR,El::STAR> temp1(g);
 				DistMatrix<T,El::VR,El::STAR> temp2(g);
 				SVD(Q, temp1, temp2);
 				//qr::ExplicitUnitary(Q);
 				Q.Resize(m,R);
 			}
 			else{
-				DistMatrix<T,El::VR,El::STAR> Y = Q; //need a copy because QR overwrites it
-				//qr::ExplicitUnitary(Q);
-				DistMatrix<T,El::VR,El::STAR> temp1(g);
+				//Copy(Y,Q);
+				Q = View(Y,0,0,m,R+l);
+				DistMatrix<Base<T>,El::VR,El::STAR> temp1(g);
 				DistMatrix<T,El::VR,El::STAR> temp2(g);
 				SVD(Q, temp1, temp2);
 				Q.Resize(m,R);
+
 				// compute an error estimate
-				//Base<T> s_1 = TwoNormEstimate(Y);
 				Base<T> s_1 = temp1.Get(0,0);
 				// compute  ||Y - QQ*Y||
 				DistMatrix<T,El::VR,El::STAR> C(R,R+l,g);
@@ -254,22 +272,23 @@ void rsvd(DistMatrix<T,El::VR,El::STAR> &U, DistMatrix<T,El::VR,El::STAR> &s, Di
 
 				Gemm(El::ADJOINT,El::NORMAL,alpha,Q,Y,beta,C);
 				Gemm(El::NORMAL,El::NORMAL,alpha,Q,C,beta,D);
-				Axpy(-1.0,D,Y);
-				Base<T> s_diff = TwoNormEstimate(Y);
+				Axpy(-1.0,Y,D);
+				Base<T> s_diff = TwoNormEstimate(D);
 				err_est = std::pow(s_diff/s_1,1.0/(q+1));
-				//std::cout << err_est << std::endl;
 			}
 			R_old = R;
 			if(err_est > tol){
-				R += inc_size;
+				if(R + inc_size < std::min(m,n)){
+					R += inc_size;
+				}
+				else{
+					R = std::min(m,n);
+				}
 			}
+		if(!rank) std::cout << "err: " << err_est <<std::endl;
 		}
-		while(adap == rsvd::ADAP and err_est > tol);
-		//std::cout << "R: " << R <<std::endl;
-		//std::cout << "err: " << err_est <<std::endl;
+		while(adap == rsvd::ADAP and err_est > tol and R_old < max_sz);
 
-		DistMatrix<T,El::VR,El::STAR> AtQ(g);
-		//Zeros(AtQ,n,r);
 		Zeros(V,n,R);
 		for(int i=0;i<R;i++){
 			DistMatrix<T,El::VR,El::STAR> Q_i = View(Q, 0, i, m, 1);
@@ -295,11 +314,8 @@ void rsvd(DistMatrix<T,El::VR,El::STAR> &U, DistMatrix<T,El::VR,El::STAR> &s, Di
 			s_buffer[i] = T(s_real_buffer[i]);
 		}
 
-		//Adjoint(V,Vt);
-
 		Zeros(U,m,R);
 		Gemm(El::NORMAL,El::NORMAL,alpha,Q,U_tilde,beta,U);
-
 	}
 
 	ctrl.r = R;
