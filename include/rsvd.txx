@@ -85,6 +85,7 @@ void rsvd(DistMatrix<T,El::VR,El::STAR> &U, DistMatrix<T,El::VR,El::STAR> &s, Di
 	Orientation orientation=ctrl.orientation;
 	Adaptive adap=ctrl.adap;
 
+
 	// some checks
 	if(m==0 or n==0) std::logic_error("The matrix sizes in the ctrl struct are set to 0. Please set the sizes appropriately");
 	
@@ -129,16 +130,23 @@ void rsvd(DistMatrix<T,El::VR,El::STAR> &U, DistMatrix<T,El::VR,El::STAR> &s, Di
 			}
 
 			if(adap == rsvd::FIXED){
-				qr::ExplicitUnitary(Q);
+				DistMatrix<T,El::VR,El::STAR> temp1(g);
+				DistMatrix<T,El::VR,El::STAR> temp2(g);
+				SVD(Q, temp1, temp2);
+				//qr::ExplicitUnitary(Q);
 				Q.Resize(n,R);
 				// Estimate the error if adaptivity is on, else we are done
 			}
 			else{
 				DistMatrix<T,El::VR,El::STAR> Y = Q;
-				qr::ExplicitUnitary(Q);
+				DistMatrix<T,El::VR,El::STAR> temp1(g);
+				DistMatrix<T,El::VR,El::STAR> temp2(g);
+				SVD(Q, temp1, temp2);
+				//qr::ExplicitUnitary(Q);
 				Q.Resize(n,R);
 				// compute an error estimate
-				Base<T> s_1 = TwoNormEstimate(Y);
+				//Base<T> s_1 = TwoNormEstimate(Y);
+				Base<T> s_1 = temp1.Get(0,0);
 				// compute  ||Y - QQ*Y||
 				DistMatrix<T,El::VR,El::STAR> C(R,R+l,g);
 				DistMatrix<T,El::VR,El::STAR> D(n,R+l,g);
@@ -158,8 +166,8 @@ void rsvd(DistMatrix<T,El::VR,El::STAR> &U, DistMatrix<T,El::VR,El::STAR> &s, Di
 			}
 		}
 		while(adap == rsvd::ADAP and err_est > tol);
-		std::cout << "R: " << R <<std::endl;
-		std::cout << "err: " << err_est <<std::endl;
+		//std::cout << "R: " << R <<std::endl;
+		//std::cout << "err: " << err_est <<std::endl;
 
 		// Now Y is such that G* \approx QQ*G*.Thus we can compute GQ
 		// Compute it's SVD and then multiply by Q*, thus giving the approx 
@@ -222,15 +230,22 @@ void rsvd(DistMatrix<T,El::VR,El::STAR> &U, DistMatrix<T,El::VR,El::STAR> &s, Di
 			}
 
 			if(adap == rsvd::FIXED){
-				qr::ExplicitUnitary(Q);
+				DistMatrix<T,El::VR,El::STAR> temp1(g);
+				DistMatrix<T,El::VR,El::STAR> temp2(g);
+				SVD(Q, temp1, temp2);
+				//qr::ExplicitUnitary(Q);
 				Q.Resize(m,R);
 			}
 			else{
 				DistMatrix<T,El::VR,El::STAR> Y = Q; //need a copy because QR overwrites it
-				qr::ExplicitUnitary(Q);
+				//qr::ExplicitUnitary(Q);
+				DistMatrix<T,El::VR,El::STAR> temp1(g);
+				DistMatrix<T,El::VR,El::STAR> temp2(g);
+				SVD(Q, temp1, temp2);
 				Q.Resize(m,R);
 				// compute an error estimate
-				Base<T> s_1 = TwoNormEstimate(Y);
+				//Base<T> s_1 = TwoNormEstimate(Y);
+				Base<T> s_1 = temp1.Get(0,0);
 				// compute  ||Y - QQ*Y||
 				DistMatrix<T,El::VR,El::STAR> C(R,R+l,g);
 				DistMatrix<T,El::VR,El::STAR> D(m,R+l,g);
@@ -250,8 +265,8 @@ void rsvd(DistMatrix<T,El::VR,El::STAR> &U, DistMatrix<T,El::VR,El::STAR> &s, Di
 			}
 		}
 		while(adap == rsvd::ADAP and err_est > tol);
-		std::cout << "R: " << R <<std::endl;
-		std::cout << "err: " << err_est <<std::endl;
+		//std::cout << "R: " << R <<std::endl;
+		//std::cout << "err: " << err_est <<std::endl;
 
 		DistMatrix<T,El::VR,El::STAR> AtQ(g);
 		//Zeros(AtQ,n,r);
