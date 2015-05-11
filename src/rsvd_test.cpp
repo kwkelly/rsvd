@@ -181,11 +181,11 @@ void test(const int m, const int n, const int k, int r, const int l, const int q
 	Zeros(A,m,n);
 	Gemm(NORMAL,ADJOINT,alpha,L_copy,R,beta,A);
 
-	auto A_sf  = std::bind(rsvd_test_func,_1,_2,&A);
-	auto At_sf = std::bind(rsvd_test_t_func,_1,_2,&A);
+	//auto A_sf  = std::bind(rsvd_test_func,_1,_2,&A);
+	//auto At_sf = std::bind(rsvd_test_t_func,_1,_2,&A);
 
-	//auto A_sf  = std::bind(rsvd_test_func2,_1,_2,&L,&D,&R);
-	//auto At_sf = std::bind(rsvd_test_t_func2,_1,_2,&L,&D,&R);
+	auto A_sf  = std::bind(rsvd_test_func2,_1,_2,&L,&D,&R);
+	auto At_sf = std::bind(rsvd_test_t_func2,_1,_2,&L,&D,&R);
 
 
 	DistMatrix<double,VR,STAR> U(g);
@@ -207,6 +207,10 @@ void test(const int m, const int n, const int k, int r, const int l, const int q
 		for(int i=0;i<10;i++){
 			if(!mpi::Rank(comm)) std::cout << "rsvd" << std::endl;
 			ctrl.r = r_orig;
+			U.Empty();
+			S.Empty();
+			V.Empty();
+
 			double rsvd_start = mpi::Time();
 			rsvd::rsvd(U,S,V,A_sf,At_sf,ctrl);
 			double rsvd_time = mpi::Time() - rsvd_start;
