@@ -41,7 +41,7 @@ int ApplySVDt(const DistMatrix<T,VR,STAR> &U, const DistMatrix<T,VR,STAR> &S, co
 	T beta  = T(0.0);
 
 	const Grid& g = U.Grid();
-	int N = V.Height(),
+	int N = V.Height();
 	Zeros(y,N,1);
 
 	DistMatrix<T,VR,STAR> temp(g);
@@ -138,7 +138,7 @@ int rsvd_test_t_func(DistMatrix<double,VR,STAR> &x, DistMatrix<double,VR,STAR> &
 }
 
 
-void test(const int m, const int n, const int k, int r, const int l, const int q, const double tol, const double d, rsvd::Adaptive adap, rsvd::Orientation orientation){
+void test(const int m, const int n, const int k, int r, const int l, const int q, const double tol, const double d, const int max_sz, rsvd::Adaptive adap, rsvd::Orientation orientation){
 
 	double alpha =1.0;
 	double beta =0.0;
@@ -161,6 +161,7 @@ void test(const int m, const int n, const int k, int r, const int l, const int q
 		std::cout << "l: " << l << std::endl;
 		std::cout << "q: " << q << std::endl;
 		std::cout << "k: " << exact_rank << std::endl;
+		std::cout << "max_sz: " << max_sz << std::endl;
 		std::cout << "tol: " << tol << std::endl;
 		std::cout << "d: " << d << std::endl;
 	};
@@ -200,11 +201,12 @@ void test(const int m, const int n, const int k, int r, const int l, const int q
 		ctrl.l=l;
 		ctrl.q=q;
 		ctrl.tol=tol;
+		ctrl.max_sz=max_sz;
 
 		ctrl.adap=adap;
 		ctrl.orientation=orientation;
 
-		for(int i=0;i<10;i++){
+		for(int i=0;i<1;i++){
 			if(!mpi::Rank(comm)) std::cout << "rsvd" << std::endl;
 			ctrl.r = r_orig;
 			U.Empty();
@@ -258,8 +260,31 @@ void test(const int m, const int n, const int k, int r, const int l, const int q
 			double ndiff = TwoNorm(y_svd)/TwoNorm(y_ex);
 			if(!mpi::Rank(comm)) std::cout << "||y_ex - y_svd||/||y_ex||=" << ndiff << std::endl;
 		}
+	
+		// compare Au_1 - s_1v_1
+		auto v1 = LockedView(V,0,0,n,1);
+		auto u1 = LockedView(U,0,0,m,1);
+		auto s_1 = S.Get(0,0);
+		DistMatrix<double,VR,STAR> temp1(m,1,g);
+		DistMatrix<double,VR,STAR> temp2(m,1,g);
+		Zeros(temp2,m,1);
+		ApplySVD(L,D,R,v1,temp1);
+		Axpy(s_1,u1,temp2);
+		Axpy(-1.0,temp2,temp1);
+		auto spec_norm = TwoNorm(temp1);
+		if(!mpi::Rank(comm)) std::cout << "||Av_1 - s_1u_1||=" << spec_norm << std::endl;
 
-		// report the times
+		// compare A*v_1 - s_1u_1
+		temp1.Resize(n,1);
+		temp2.Resize(n,1);
+		Zeros(temp2,n,1);
+		ApplySVDt(L,D,R,u1,temp1);
+		Axpy(s_1,v1,temp2);
+		Axpy(-1.0,temp2,temp1);
+		auto spec_norm2 = TwoNorm(temp1);
+		if(!mpi::Rank(comm)) std::cout << "||A*u_1 - s_1v_1||=" << spec_norm2 << std::endl;
+		
+
 
 		// compare the singular values
 		D.Resize((r<exact_rank)?r:exact_rank,1);
@@ -303,6 +328,7 @@ int main(int argc, char* argv[]){
 	const std::string orientation_s = Input("--orient","NORMAL or ADJOINT","NORMAL");
 	const double d = Input("--d","decay",0.75);
 	const double tol = Input("--tol","rsvd tolerance",0.05);
+	const int max_sz = Input("--max_rank","maximum rank to allow",std::min(m,n));
 
 
 	rsvd::Adaptive adap;
@@ -323,14 +349,10 @@ int main(int argc, char* argv[]){
 		orientation = rsvd::NORMAL;
 	}
 
-
-
-
-
 	ProcessInput();
 	PrintInputReport();
 
-	test(m,n,k,r,l,q,tol,d,adap,orientation);
+	test(m,n,k,r,l,q,tol,d,max_sz,adap,orientation);
 	Finalize();
 
 }
