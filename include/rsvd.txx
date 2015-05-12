@@ -116,26 +116,27 @@ void rsvd(DistMatrix<T,El::VR,El::STAR> &U, DistMatrix<T,El::VR,El::STAR> &s, Di
 		DistMatrix<T,El::VR,El::STAR> rw(g);
 		DistMatrix<T,El::VR,El::STAR> Q(g); // the projection of omega through A
 		DistMatrix<T,El::VR,El::STAR> W(g); // the projection of omega through A
+		W.Resize(n,max_sz+l);
 
 		do{
-			W.Resize(m,max_sz+l);
-			auto Y = View(W, 0, 0, m, R+l);
+			auto Y = View(W, 0, 0, n, R+l);
 			for(int i=R_old;i<R+l;i++){ //project A*\Omega
 				Gaussian(rw, m, 1);
-				DistMatrix<T,El::VR,El::STAR> Y_i = View(Y, 0, i, n, 1);
+				auto Y_i = View(Y, 0, i, n, 1);
 				At(rw,Y_i);
 			}
 			for(int p=0;p<q;p++){ // power iterate
 				DistMatrix<T,El::VR,El::STAR> temp(m,1,g);
 				for(int i=R_old;i<R+l;i++){ // Apply A*
-					DistMatrix<T,El::VR,El::STAR> Y_i = View(Y, 0, i, n, 1);
+					auto Y_i = View(Y, 0, i, n, 1);
 					A(Y_i,temp);
 					At(temp,Y_i);
 				}
 			}
 
 			if(adap == rsvd::FIXED){
-				Copy(Y,Q);
+				//Copy(Y,Q);
+				Q = View(Y,0,0,n,R+l);
 				DistMatrix<Base<T>,El::VR,El::STAR> temp1(g);
 				DistMatrix<T,El::VR,El::STAR> temp2(g);
 				SVD(Q, temp1, temp2);
@@ -144,8 +145,9 @@ void rsvd(DistMatrix<T,El::VR,El::STAR> &U, DistMatrix<T,El::VR,El::STAR> &s, Di
 				// Estimate the error if adaptivity is on, else we are done
 			}
 			else{
-				Copy(Y,Q);
-				DistMatrix<T,El::VR,El::STAR> Y = Q;
+				//Copy(Y,Q);
+				Q = View(Y,0,0,n,R+l);
+				//DistMatrix<T,El::VR,El::STAR> Y = Q;
 				DistMatrix<Base<T>,El::VR,El::STAR> temp1(g);
 				DistMatrix<T,El::VR,El::STAR> temp2(g);
 				SVD(Q, temp1, temp2);
@@ -160,6 +162,10 @@ void rsvd(DistMatrix<T,El::VR,El::STAR> &U, DistMatrix<T,El::VR,El::STAR> &s, Di
 				Zeros(C,R,R+l);
 				Zeros(D,n,R+l);
 
+				std::cout << "YH: " << Y.Height() << std::endl;
+				std::cout << "Yw: " << Y.Width() << std::endl;
+				std::cout << "QH: " << Q.Height() << std::endl;
+				std::cout << "Qw: " << Q.Width() << std::endl;
 				Gemm(El::ADJOINT,El::NORMAL,alpha,Q,Y,beta,C);
 				Gemm(El::NORMAL,El::NORMAL,alpha,Q,C,beta,D);
 				Axpy(-1.0,D,Y);
@@ -170,11 +176,11 @@ void rsvd(DistMatrix<T,El::VR,El::STAR> &U, DistMatrix<T,El::VR,El::STAR> &s, Di
 			R_old = R;
 			if(err_est > tol){
 
-				if(R + inc_size < std::min(m,n)){
+				if(R + inc_size < max_sz){
 					R += inc_size;
 				}
 				else{
-					R = std::min(m,n);
+					R = max_sz;
 				}
 			}
 
@@ -226,20 +232,20 @@ void rsvd(DistMatrix<T,El::VR,El::STAR> &U, DistMatrix<T,El::VR,El::STAR> &s, Di
 		DistMatrix<T,El::VR,El::STAR> rw(g);
 		DistMatrix<T,El::VR,El::STAR> Q(g); // the projection of omega through A
 		DistMatrix<T,El::VR,El::STAR> W(g); // the projection of omega through A
+		W.Resize(m,max_sz+l);
 
 		do{
-			W.Resize(m,max_sz+l);
 			auto Y = View(W, 0, 0, m, R+l);
 
 			for(int i=R_old;i<R+l;i++){// apply A\Omega
 				Gaussian(rw, n, 1);
-				DistMatrix<T,El::VR,El::STAR> Y_i = View(Y, 0, i, m, 1);
+				auto Y_i = View(Y, 0, i, m, 1);
 				A(rw,Y_i);
 			}
 			for(int p=0;p<q;p++){ // power iterate
 				DistMatrix<T,El::VR,El::STAR> temp(n,1,g);
 				for(int i=R_old;i<R+l;i++){ // Apply A*
-					DistMatrix<T,El::VR,El::STAR> Y_i = View(Y, 0, i, m, 1);
+					auto Y_i = View(Y, 0, i, m, 1);
 					At(Y_i,temp);
 					A(temp,Y_i);
 				}
@@ -278,11 +284,11 @@ void rsvd(DistMatrix<T,El::VR,El::STAR> &U, DistMatrix<T,El::VR,El::STAR> &s, Di
 			}
 			R_old = R;
 			if(err_est > tol){
-				if(R + inc_size < std::min(m,n)){
+				if(R + inc_size < max_sz){
 					R += inc_size;
 				}
 				else{
-					R = std::min(m,n);
+					R = max_sz;
 				}
 			}
 		if(!rank) std::cout << "err: " << err_est <<std::endl;
