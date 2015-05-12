@@ -162,10 +162,6 @@ void rsvd(DistMatrix<T,El::VR,El::STAR> &U, DistMatrix<T,El::VR,El::STAR> &s, Di
 				Zeros(C,R,R+l);
 				Zeros(D,n,R+l);
 
-				std::cout << "YH: " << Y.Height() << std::endl;
-				std::cout << "Yw: " << Y.Width() << std::endl;
-				std::cout << "QH: " << Q.Height() << std::endl;
-				std::cout << "Qw: " << Q.Width() << std::endl;
 				Gemm(El::ADJOINT,El::NORMAL,alpha,Q,Y,beta,C);
 				Gemm(El::NORMAL,El::NORMAL,alpha,Q,C,beta,D);
 				Axpy(-1.0,D,Y);

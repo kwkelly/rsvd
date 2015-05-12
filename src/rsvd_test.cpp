@@ -192,7 +192,6 @@ void test(const int m, const int n, const int k, int r, const int l, const int q
 	DistMatrix<double,VR,STAR> U(g);
 	DistMatrix<double,VR,STAR> S(g);
 	DistMatrix<double,VR,STAR> V(g);
-
 	{ // compute the rsvd factorization
 		rsvd::RSVDCtrl ctrl;
 		ctrl.m=m;
@@ -206,7 +205,7 @@ void test(const int m, const int n, const int k, int r, const int l, const int q
 		ctrl.adap=adap;
 		ctrl.orientation=orientation;
 
-		for(int i=0;i<1;i++){
+		for(int i=0;i<10;i++){
 			if(!mpi::Rank(comm)) std::cout << "rsvd" << std::endl;
 			ctrl.r = r_orig;
 			U.Empty();
@@ -254,11 +253,27 @@ void test(const int m, const int n, const int k, int r, const int l, const int q
 
 			//ApplySVD(L,D,R,x,y_ex);
 			Zeros(y_ex,m,1);
-			Gemm(El::NORMAL, El::NORMAL,alpha, A,x,beta,y_ex);
+			//Gemv(El::NORMAL, alpha,A,x,y_ex);
+			ApplySVD(L,D,R,x,y_ex);
 			ApplySVD(U,S,V,x,y_svd);
 			Axpy(-1.0,y_ex,y_svd);
 			double ndiff = TwoNorm(y_svd)/TwoNorm(y_ex);
 			if(!mpi::Rank(comm)) std::cout << "||y_ex - y_svd||/||y_ex||=" << ndiff << std::endl;
+
+			// and test the reverse
+      Gaussian(x,m,1);
+      DistMatrix<double,VR,STAR> z_ex(n,1,g);
+      DistMatrix<double,VR,STAR> z_svd(n,1,g);
+
+      //ApplySVD(L,D,R,x,y_ex);
+      Zeros(z_ex,m,1);
+      //Gemv(El::ADJOINT,alpha,A,x,z_ex);
+			ApplySVDt(L,D,R,x,z_ex);
+      ApplySVDt(U,S,V,x,z_svd);
+      Axpy(-1.0,z_ex,z_svd);
+      double ndiff2 = TwoNorm(z_svd)/TwoNorm(z_ex);
+      if(!mpi::Rank(comm)) std::cout << "||z_ex - z_svd||/||z_ex||=" << ndiff << std::endl;
+
 		}
 	
 		// compare Au_1 - s_1v_1
@@ -295,14 +310,13 @@ void test(const int m, const int n, const int k, int r, const int l, const int q
 		double sing_diff = TwoNorm(S)/TwoNorm(D);
 		if(!mpi::Rank(comm)) std::cout << "||D-S||/||D||=" << sing_diff << std::endl;
 
-
 		{// compare to full svd
 			DistMatrix<double,VR,STAR> S_ex(g);
 			DistMatrix<double,VR,STAR> V_ex(g);
 
 			// compute the exact svd and then report that time
 			double svd_start = mpi::Time();
-			SVD(A,S_ex,V_ex,SVDCtrl<double>());
+			SVD(A,S_ex,V_ex);
 			double svd_time = mpi::Time() - svd_start;
 			double svd_time_max;
 			mpi::Reduce(&svd_time,&svd_time_max,1,mpi::MAX,0,comm);
