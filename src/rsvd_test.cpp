@@ -59,8 +59,8 @@ int ApplySVDt(const DistMatrix<T,VR,STAR> &U, const DistMatrix<T,VR,STAR> &S, co
 //template<class double>
 int rsvd_test_func2(const DistMatrix<double,VR,STAR> &x, DistMatrix<double,VR,STAR> &y, DistMatrix<double,VR,STAR> *L,DistMatrix<double,VR,STAR> *D, DistMatrix<double,VR,STAR> *R){
 
-	auto alpha = make_one<double>();
-	auto beta  = make_zero<double>();
+	auto alpha = 1.0;
+	auto beta  = 0.0;
 
 	const Grid& g = x.Grid();
 
@@ -80,8 +80,8 @@ int rsvd_test_func2(const DistMatrix<double,VR,STAR> &x, DistMatrix<double,VR,ST
 //template<class double>
 int rsvd_test_t_func2(const DistMatrix<double,VR,STAR> &x, DistMatrix<double,VR,STAR> &y, DistMatrix<double,VR,STAR> *L,DistMatrix<double,VR,STAR> *D, DistMatrix<double,VR,STAR> *R){
 
-	auto alpha = make_one<double>();
-	auto beta  = make_zero<double>();
+	auto alpha = 1.0;
+	auto beta  =0.0;
 	const Grid& g = x.Grid();
 
 	int N = R->Height();
@@ -107,8 +107,8 @@ int rsvd_test_func(DistMatrix<double,VR,STAR> &x, DistMatrix<double,VR,STAR> &y,
 	int rank;
 	MPI_Comm_rank(comm,&rank);
 	//if(!rank) std::cout << "A" << std::endl;
-	auto alpha = make_one<double>();
-	auto beta  = make_zero<double>();
+	auto alpha = 1.0;
+	auto beta  = 0.0;
 
 	int N = A->Height();
 	Zeros(y,N,1);
@@ -126,8 +126,8 @@ int rsvd_test_t_func(DistMatrix<double,VR,STAR> &x, DistMatrix<double,VR,STAR> &
 	MPI_Comm_rank(comm,&rank);
 	//if(!rank) std::cout << "At" << std::endl;
 
-	auto alpha = make_one<double>();
-	auto beta  = make_zero<double>();
+	auto alpha = 1.0;
+	auto beta  = 0.0;
 
 	int N = A->Width();
 	Zeros(y,N,1);

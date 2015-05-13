@@ -4,49 +4,6 @@
 
 using namespace El;
 
-template<class T>
-T make_one()
-{
-	return 1.0;
-}
-
-template<>
-Complex<double> make_one()
-{
-	Complex<double> alpha;
-	SetRealPart(alpha,1.0);
-	SetImagPart(alpha,0.0);
-	return alpha;
-}
-
-template<>
-double make_one()
-{
-	return 1.0;
-}
-
-
-template<class T>
-T make_zero()
-{
-	return 0.0;
-}
-
-template<>
-Complex<double> make_zero()
-{
-	Complex<double> alpha;
-	SetRealPart(alpha,0.0);
-	SetImagPart(alpha,0.0);
-	return alpha;
-}
-
-template<>
-double make_zero()
-{
-	return 0.0;
-}
-
 namespace rsvd{
 
 
