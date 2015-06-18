@@ -104,14 +104,12 @@ void rsvd(DistMatrix<T,El::VR,El::STAR> &U, DistMatrix<T,El::VR,El::STAR> &s, Di
 			else{
 				//Copy(Y,Q);
 				Q = View(Y,0,0,n,R+l);
-				//DistMatrix<T,El::VR,El::STAR> Y = Q;
 				DistMatrix<Base<T>,El::VR,El::STAR> temp1(g);
 				DistMatrix<T,El::VR,El::STAR> temp2(g);
 				SVD(Q, temp1, temp2);
-				//qr::ExplicitUnitary(Q);
 				Q.Resize(n,R);
+
 				// compute an error estimate
-				//Base<T> s_1 = TwoNormEstimate(Y);
 				Base<T> s_1 = temp1.Get(0,0);
 				// compute  ||Y - QQ*Y||
 				DistMatrix<T,El::VR,El::STAR> C(R,R+l,g);
@@ -121,25 +119,24 @@ void rsvd(DistMatrix<T,El::VR,El::STAR> &U, DistMatrix<T,El::VR,El::STAR> &s, Di
 
 				Gemm(El::ADJOINT,El::NORMAL,alpha,Q,Y,beta,C);
 				Gemm(El::NORMAL,El::NORMAL,alpha,Q,C,beta,D);
-				Axpy(-1.0,D,Y);
-				Base<T> s_diff = TwoNormEstimate(Y);
+				Axpy(-1.0,Y,D);
+				Base<T> s_diff = TwoNormEstimate(D);
 				err_est = std::pow(s_diff/s_1,1.0/(q+1));
 				//std::cout << err_est << std::endl;
-			}
-			R_old = R;
-			if(err_est > tol){
+				R_old = R;
+				if(err_est > tol){
 
-				if(R + inc_size < max_sz){
-					R += inc_size;
+					if(R + inc_size < max_sz){
+						R += inc_size;
+					}
+					else{
+						R = max_sz;
+					}
 				}
-				else{
-					R = max_sz;
-				}
+				if(!rank) std::cout << "err: " << err_est <<std::endl;
 			}
-
-		std::cout << "err: " << err_est <<std::endl;
 		}
-		while(adap == rsvd::ADAP and err_est > tol);
+		while(adap == rsvd::ADAP and err_est > tol and R_old < max_sz);
 
 		// Now Y is such that G* \approx QQ*G*.Thus we can compute GQ
 		// Compute it's SVD and then multiply by Q*, thus giving the approx 
@@ -161,16 +158,7 @@ void rsvd(DistMatrix<T,El::VR,El::STAR> &U, DistMatrix<T,El::VR,El::STAR> &s, Di
 
 		SVD(U, s_real, V_tilde, SVDCtrl<double>());
 
-
-		int h = s.LocalHeight();
-		int w = s.LocalWidth();	
-		auto s_real_buffer = s_real.Buffer();
-		T* s_buffer = s.Buffer();
-
-		#pragma omp parallel for // cast the diagonal matrix to type T
-		for(int i=0;i<w*h;i++){
-			s_buffer[i] = T(s_real_buffer[i]);
-		}
+		s = s_real;
 
 		// G \approx GQQ* = U\Sigma\V*Q*
 		// So We take V* and multiply by Q*
@@ -234,17 +222,18 @@ void rsvd(DistMatrix<T,El::VR,El::STAR> &U, DistMatrix<T,El::VR,El::STAR> &s, Di
 				Axpy(-1.0,Y,D);
 				Base<T> s_diff = TwoNormEstimate(D);
 				err_est = std::pow(s_diff/s_1,1.0/(q+1));
-			}
-			R_old = R;
-			if(err_est > tol){
-				if(R + inc_size < max_sz){
-					R += inc_size;
+
+				R_old = R;
+				if(err_est > tol){
+					if(R + inc_size < max_sz){
+						R += inc_size;
+					}
+					else{
+						R = max_sz;
+					}
 				}
-				else{
-					R = max_sz;
-				}
+				if(!rank) std::cout << "err: " << err_est <<std::endl;
 			}
-		if(!rank) std::cout << "err: " << err_est <<std::endl;
 		}
 		while(adap == rsvd::ADAP and err_est > tol and R_old < max_sz);
 
@@ -263,15 +252,7 @@ void rsvd(DistMatrix<T,El::VR,El::STAR> &U, DistMatrix<T,El::VR,El::STAR> &s, Di
 
 		SVD(V, s_real, U_tilde, SVDCtrl<double>());
 
-		int h = s.LocalHeight();
-		int w = s.LocalWidth();
-		auto s_real_buffer = s_real.Buffer();
-		T* s_buffer = s.Buffer();
-
-		#pragma omp parallel for
-		for(int i=0;i<w*h;i++){
-			s_buffer[i] = T(s_real_buffer[i]);
-		}
+		s = s_real;
 
 		Zeros(U,m,R);
 		Gemm(El::NORMAL,El::NORMAL,alpha,Q,U_tilde,beta,U);

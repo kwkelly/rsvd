@@ -4,18 +4,20 @@ WAIT_TIME=120
 MAX_TIME=04:00:00
 TOL=0.00000001
 
-for M in 10000
+for M in 1000
 do
-	for N in 5000
+	for N in 500
 	do
 		for R in 25
 		do
-			for D in 0.85
+			for D in 0.90
 			do
 			for L in 10
 			do
-			for NODES in 1 2 8 16 32
+			for NODES in 1 2 3 4
 			do
+				for Q in 0
+				do
 				MIN_MN=$(($M<$N?$M:$N))
 				while : ; do
 					[[ $(squeue -u $USER | tail -n +1 | wc -l) -lt $MAX_QUEUE ]] && break
@@ -25,7 +27,7 @@ do
 				if [ "$MIN_MN" -ge  "$R" ]; then
 				#JOBNAME=rsvd-$M-$N-$R-$D-$L
 				#JOBNAME=test100
-				JOBNAME=strong8-exact-$NODES-$M-$N-$R-$D
+				JOBNAME=tests-$NODES-$M-$N-$R-$D
 cat <<-EOS | sbatch
 				#!/bin/bash
 
@@ -41,7 +43,7 @@ cat <<-EOS | sbatch
 				#SBATCH -A PADAS
 
 				cd ~/projects/rsvd/build/
-				ibrun ./rsvd_test --m $M --n $N --r $R --d $D --l $L --tol $TOL --adap ADAP --orient NORMAL --max_rank 500 --k 500
+				ibrun ./rsvd_test --m $M --n $N --r $R --d $D --l $L --tol $TOL --adap ADAP --orient NORMAL --max_rank 500 --k 500 -q $Q
 
 				exit 0
 				EOS
@@ -49,6 +51,7 @@ cat <<-EOS | sbatch
 			done
 		done
 	done
+done
 done
 done
 done
