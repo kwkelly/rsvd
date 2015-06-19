@@ -1,7 +1,7 @@
 #!/bin/bash
 MAX_QUEUE=20
 WAIT_TIME=120
-MAX_TIME=04:00:00
+MAX_TIME=00:10:00
 TOL=0.00000001
 
 for M in 1000
@@ -14,7 +14,7 @@ do
 			do
 			for L in 10
 			do
-			for NODES in 1 2 3 4
+			for NODES in 1 2 3 4 6 8
 			do
 				for Q in 0
 				do

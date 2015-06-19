@@ -8,7 +8,7 @@
 using namespace El;
 using namespace std::placeholders;
 //typedef El::Complex<double> scalar_t;
-typedef double scalar_t;
+typedef El::Complex<double> scalar_t;
 
 
 template<typename T>

@@ -158,7 +158,15 @@ void rsvd(DistMatrix<T,El::VR,El::STAR> &U, DistMatrix<T,El::VR,El::STAR> &s, Di
 
 		SVD(U, s_real, V_tilde, SVDCtrl<double>());
 
-		s = s_real;
+		int h = s.LocalHeight();
+		int w = s.LocalWidth();
+		auto s_real_buffer = s_real.Buffer();
+		T* s_buffer = s.Buffer();
+
+		#pragma omp parallel for
+		for(int i=0;i<w*h;i++){
+			s_buffer[i] = T(s_real_buffer[i]);
+		}
 
 		// G \approx GQQ* = U\Sigma\V*Q*
 		// So We take V* and multiply by Q*
@@ -252,7 +260,15 @@ void rsvd(DistMatrix<T,El::VR,El::STAR> &U, DistMatrix<T,El::VR,El::STAR> &s, Di
 
 		SVD(V, s_real, U_tilde, SVDCtrl<double>());
 
-		s = s_real;
+		int h = s.LocalHeight();
+		int w = s.LocalWidth();
+		auto s_real_buffer = s_real.Buffer();
+		T* s_buffer = s.Buffer();
+
+		#pragma omp parallel for
+		for(int i=0;i<w*h;i++){
+			s_buffer[i] = T(s_real_buffer[i]);
+		}
 
 		Zeros(U,m,R);
 		Gemm(El::NORMAL,El::NORMAL,alpha,Q,U_tilde,beta,U);
