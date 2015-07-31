@@ -31,7 +31,7 @@ struct RSVDCtrl
 
 
 template<typename F1, typename F2, typename T> 
-void rsvd(DistMatrix<T,El::VR,El::STAR> &U, DistMatrix<T,El::VR,El::STAR> &s, DistMatrix<T,El::VR,El::STAR> &V, F1 A, F2 At, RSVDCtrl &ctrl)
+void rsvd(DistMatrix<T,El::VC,El::STAR> &U, DistMatrix<T,El::VC,El::STAR> &s, DistMatrix<T,El::VC,El::STAR> &V, F1 A, F2 At, RSVDCtrl &ctrl)
 {
 	// rsvd ctrl is the ctrl structure governing the RSVD behavior
 	// extract the ctrl data
@@ -70,9 +70,9 @@ void rsvd(DistMatrix<T,El::VR,El::STAR> &U, DistMatrix<T,El::VR,El::STAR> &s, Di
 	// ORIENTATION ADJOINT
 	/////////////////////////////
 	if(orientation == ADJOINT){
-		DistMatrix<T,El::VR,El::STAR> rw(g);
-		DistMatrix<T,El::VR,El::STAR> Q(g); // the projection of omega through A
-		DistMatrix<T,El::VR,El::STAR> W(g); // the projection of omega through A
+		DistMatrix<T,El::VC,El::STAR> rw(g);
+		DistMatrix<T,El::VC,El::STAR> Q(g); // the projection of omega through A
+		DistMatrix<T,El::VC,El::STAR> W(g); // the projection of omega through A
 		W.Resize(n,max_sz+l);
 
 		do{
@@ -83,7 +83,7 @@ void rsvd(DistMatrix<T,El::VR,El::STAR> &U, DistMatrix<T,El::VR,El::STAR> &s, Di
 				At(rw,Y_i);
 			}
 			for(int p=0;p<q;p++){ // power iterate
-				DistMatrix<T,El::VR,El::STAR> temp(m,1,g);
+				DistMatrix<T,El::VC,El::STAR> temp(m,1,g);
 				for(int i=R_old;i<R+l;i++){ // Apply A*
 					auto Y_i = View(Y, 0, i, n, 1);
 					A(Y_i,temp);
@@ -94,8 +94,8 @@ void rsvd(DistMatrix<T,El::VR,El::STAR> &U, DistMatrix<T,El::VR,El::STAR> &s, Di
 			if(adap == rsvd::FIXED){
 				//Copy(Y,Q);
 				Q = View(Y,0,0,n,R+l);
-				DistMatrix<Base<T>,El::VR,El::STAR> temp1(g);
-				DistMatrix<T,El::VR,El::STAR> temp2(g);
+				DistMatrix<Base<T>,El::VC,El::STAR> temp1(g);
+				DistMatrix<T,El::VC,El::STAR> temp2(g);
 				SVD(Q, temp1, temp2);
 				//qr::ExplicitUnitary(Q);
 				Q.Resize(n,R);
@@ -104,16 +104,16 @@ void rsvd(DistMatrix<T,El::VR,El::STAR> &U, DistMatrix<T,El::VR,El::STAR> &s, Di
 			else{
 				//Copy(Y,Q);
 				Q = View(Y,0,0,n,R+l);
-				DistMatrix<Base<T>,El::VR,El::STAR> temp1(g);
-				DistMatrix<T,El::VR,El::STAR> temp2(g);
+				DistMatrix<Base<T>,El::VC,El::STAR> temp1(g);
+				DistMatrix<T,El::VC,El::STAR> temp2(g);
 				SVD(Q, temp1, temp2);
 				Q.Resize(n,R);
 
 				// compute an error estimate
 				Base<T> s_1 = temp1.Get(0,0);
 				// compute  ||Y - QQ*Y||
-				DistMatrix<T,El::VR,El::STAR> C(R,R+l,g);
-				DistMatrix<T,El::VR,El::STAR> D(n,R+l,g);
+				DistMatrix<T,El::VC,El::STAR> C(R,R+l,g);
+				DistMatrix<T,El::VC,El::STAR> D(n,R+l,g);
 				Zeros(C,R,R+l);
 				Zeros(D,n,R+l);
 
@@ -143,17 +143,17 @@ void rsvd(DistMatrix<T,El::VR,El::STAR> &U, DistMatrix<T,El::VR,El::STAR> &s, Di
 		// SVD of G!!!
 		Zeros(U,m,R);
 		for(int i=0;i<R;i++){
-			DistMatrix<T,El::VR,El::STAR> Q_i = View(Q, 0, i, n, 1);
-			DistMatrix<T,El::VR,El::STAR> U_i = View(U, 0, i, m, 1);
+			DistMatrix<T,El::VC,El::STAR> Q_i = View(Q, 0, i, n, 1);
+			DistMatrix<T,El::VC,El::STAR> U_i = View(U, 0, i, m, 1);
 			A(Q_i,U_i);
 		}
 
 
-		DistMatrix<Base<T>,El::VR,El::STAR> s_real(g);
+		DistMatrix<Base<T>,El::VC,El::STAR> s_real(g);
 		Zeros(s_real,R,1);
 		Zeros(s,R,1);
 
-		DistMatrix<T,El::VR,El::STAR> V_tilde(g);
+		DistMatrix<T,El::VC,El::STAR> V_tilde(g);
 		//Zeros(V,r+l,r+l);
 
 		SVD(U, s_real, V_tilde, SVDCtrl<double>());
@@ -178,9 +178,9 @@ void rsvd(DistMatrix<T,El::VR,El::STAR> &U, DistMatrix<T,El::VR,El::STAR> &s, Di
 	// ORIENTATION NORMAL
 	/////////////////////////////
 	if(orientation == NORMAL){ 
-		DistMatrix<T,El::VR,El::STAR> rw(g);
-		DistMatrix<T,El::VR,El::STAR> Q(g); // the projection of omega through A
-		DistMatrix<T,El::VR,El::STAR> W(g); // the projection of omega through A
+		DistMatrix<T,El::VC,El::STAR> rw(g);
+		DistMatrix<T,El::VC,El::STAR> Q(g); // the projection of omega through A
+		DistMatrix<T,El::VC,El::STAR> W(g); // the projection of omega through A
 		W.Resize(m,max_sz+l);
 
 		do{
@@ -192,7 +192,7 @@ void rsvd(DistMatrix<T,El::VR,El::STAR> &U, DistMatrix<T,El::VR,El::STAR> &s, Di
 				A(rw,Y_i);
 			}
 			for(int p=0;p<q;p++){ // power iterate
-				DistMatrix<T,El::VR,El::STAR> temp(n,1,g);
+				DistMatrix<T,El::VC,El::STAR> temp(n,1,g);
 				for(int i=R_old;i<R+l;i++){ // Apply A*
 					auto Y_i = View(Y, 0, i, m, 1);
 					At(Y_i,temp);
@@ -203,8 +203,8 @@ void rsvd(DistMatrix<T,El::VR,El::STAR> &U, DistMatrix<T,El::VR,El::STAR> &s, Di
 			if(adap == rsvd::FIXED){
 				//Copy(Y,Q);
 				Q = View(Y,0,0,m,R+l);
-				DistMatrix<Base<T>,El::VR,El::STAR> temp1(g);
-				DistMatrix<T,El::VR,El::STAR> temp2(g);
+				DistMatrix<Base<T>,El::VC,El::STAR> temp1(g);
+				DistMatrix<T,El::VC,El::STAR> temp2(g);
 				SVD(Q, temp1, temp2);
 				//qr::ExplicitUnitary(Q);
 				Q.Resize(m,R);
@@ -212,16 +212,16 @@ void rsvd(DistMatrix<T,El::VR,El::STAR> &U, DistMatrix<T,El::VR,El::STAR> &s, Di
 			else{
 				//Copy(Y,Q);
 				Q = View(Y,0,0,m,R+l);
-				DistMatrix<Base<T>,El::VR,El::STAR> temp1(g);
-				DistMatrix<T,El::VR,El::STAR> temp2(g);
+				DistMatrix<Base<T>,El::VC,El::STAR> temp1(g);
+				DistMatrix<T,El::VC,El::STAR> temp2(g);
 				SVD(Q, temp1, temp2);
 				Q.Resize(m,R);
 
 				// compute an error estimate
 				Base<T> s_1 = temp1.Get(0,0);
 				// compute  ||Y - QQ*Y||
-				DistMatrix<T,El::VR,El::STAR> C(R,R+l,g);
-				DistMatrix<T,El::VR,El::STAR> D(m,R+l,g);
+				DistMatrix<T,El::VC,El::STAR> C(R,R+l,g);
+				DistMatrix<T,El::VC,El::STAR> D(m,R+l,g);
 				Zeros(C,R,R+l);
 				Zeros(D,m,R+l);
 
@@ -247,16 +247,16 @@ void rsvd(DistMatrix<T,El::VR,El::STAR> &U, DistMatrix<T,El::VR,El::STAR> &s, Di
 
 		Zeros(V,n,R);
 		for(int i=0;i<R;i++){
-			DistMatrix<T,El::VR,El::STAR> Q_i = View(Q, 0, i, m, 1);
-			DistMatrix<T,El::VR,El::STAR> V_i = View(V, 0, i, n, 1); // we call AtQ V because it becomes V in the SVD
+			DistMatrix<T,El::VC,El::STAR> Q_i = View(Q, 0, i, m, 1);
+			DistMatrix<T,El::VC,El::STAR> V_i = View(V, 0, i, n, 1); // we call AtQ V because it becomes V in the SVD
 			At(Q_i,V_i);
 		}
 
-		DistMatrix<Base<T>,El::VR,El::STAR> s_real(g);
+		DistMatrix<Base<T>,El::VC,El::STAR> s_real(g);
 		Zeros(s_real,R,1);
 		Zeros(s,R,1);
 
-		DistMatrix<T,El::VR,El::STAR> U_tilde(g);
+		DistMatrix<T,El::VC,El::STAR> U_tilde(g);
 
 		SVD(V, s_real, U_tilde, SVDCtrl<double>());
 
