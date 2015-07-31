@@ -31,7 +31,7 @@ struct RSVDCtrl
 
 
 template<typename F1, typename F2, typename T> 
-void rsvd(DistMatrix<T,El::VC,El::STAR> &U, DistMatrix<T,El::VC,El::STAR> &s, DistMatrix<T,El::VC,El::STAR> &V, F1 A, F2 At, RSVDCtrl &ctrl)
+void rsvd(DistMatrix<T,El::VC,El::STAR> &U, DistMatrix<T,El::VC,El::STAR> &s, DistMatrix<T,El::VC,El::STAR> &V, F1 &A, F2 &At, RSVDCtrl &ctrl)
 {
 	// rsvd ctrl is the ctrl structure governing the RSVD behavior
 	// extract the ctrl data

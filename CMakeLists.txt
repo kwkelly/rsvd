@@ -11,10 +11,8 @@ include_directories(${MPI_CXX_INCLUDE_PATH})
 find_package(Elemental REQUIRED)
 include_directories(${Elemental_INCLUDE_DIRS})
 find_package(OpenMP REQUIRED)
-include_directories(${Elemental_INCLUDE_DIRS})
 
 include_directories("include")
-
 
 set(LIBS ${LIBS} ${Elemental_LIBRARIES})
 

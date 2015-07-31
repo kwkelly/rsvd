@@ -12,7 +12,7 @@ typedef El::Complex<double> scalar_t;
 
 
 template<typename T>
-int ApplySVD(const DistMatrix<T,VR,STAR> &U, const DistMatrix<T,VR,STAR> &S, const DistMatrix<T,VR,STAR> &V,const DistMatrix<T,VR,STAR> &x,DistMatrix<T,VR,STAR> &y){
+int ApplySVD(const DistMatrix<T,VC,STAR> &U, const DistMatrix<T,VC,STAR> &S, const DistMatrix<T,VC,STAR> &V,const DistMatrix<T,VC,STAR> &x,DistMatrix<T,VC,STAR> &y){
 	// Apply the SVD
 	// y = USV*x
 
@@ -23,7 +23,7 @@ int ApplySVD(const DistMatrix<T,VR,STAR> &U, const DistMatrix<T,VR,STAR> &S, con
 	int N =	U.Height();
 	Zeros(y,N,1);
 
-	DistMatrix<T,VR,STAR> temp(g);
+	DistMatrix<T,VC,STAR> temp(g);
 	Zeros(temp,V.Width(),1);
 
 	Gemv(ADJOINT,alpha,V,x,temp);
@@ -35,7 +35,7 @@ int ApplySVD(const DistMatrix<T,VR,STAR> &U, const DistMatrix<T,VR,STAR> &S, con
 
 
 template<typename T>
-int ApplySVDt(const DistMatrix<T,VR,STAR> &U, const DistMatrix<T,VR,STAR> &S, const DistMatrix<T,VR,STAR> &V,const DistMatrix<T,VR,STAR> &x,DistMatrix<T,VR,STAR> &y){
+int ApplySVDt(const DistMatrix<T,VC,STAR> &U, const DistMatrix<T,VC,STAR> &S, const DistMatrix<T,VC,STAR> &V,const DistMatrix<T,VC,STAR> &x,DistMatrix<T,VC,STAR> &y){
 	// Apply the SVD
 	// y = USV*x
 
@@ -46,7 +46,7 @@ int ApplySVDt(const DistMatrix<T,VR,STAR> &U, const DistMatrix<T,VR,STAR> &S, co
 	int N = V.Height();
 	Zeros(y,N,1);
 
-	DistMatrix<T,VR,STAR> temp(g);
+	DistMatrix<T,VC,STAR> temp(g);
 	Zeros(temp,U.Width(),1);
 
 	Gemv(ADJOINT,alpha,U,x,temp);
@@ -59,7 +59,7 @@ int ApplySVDt(const DistMatrix<T,VR,STAR> &U, const DistMatrix<T,VR,STAR> &S, co
 
 
 //template<typename scalar_t>
-int rsvd_test_func2(const DistMatrix<scalar_t,VR,STAR> &x, DistMatrix<scalar_t,VR,STAR> &y, DistMatrix<scalar_t,VR,STAR> *L,DistMatrix<scalar_t,VR,STAR> *D, DistMatrix<scalar_t,VR,STAR> *R){
+int rsvd_test_func2(const DistMatrix<scalar_t,VC,STAR> &x, DistMatrix<scalar_t,VC,STAR> &y, DistMatrix<scalar_t,VC,STAR> *L,DistMatrix<scalar_t,VC,STAR> *D, DistMatrix<scalar_t,VC,STAR> *R){
 
 	auto alpha = scalar_t(1.0);
 	auto beta  = scalar_t(0.0);
@@ -69,7 +69,7 @@ int rsvd_test_func2(const DistMatrix<scalar_t,VR,STAR> &x, DistMatrix<scalar_t,V
 	int N = L->Height();
 	Zeros(y,N,1);
 
-	DistMatrix<scalar_t,VR,STAR> temp(g);
+	DistMatrix<scalar_t,VC,STAR> temp(g);
 	Zeros(temp,R->Width(),1);
 
 	Gemv(ADJOINT,alpha,*R,x,temp);
@@ -80,7 +80,7 @@ int rsvd_test_func2(const DistMatrix<scalar_t,VR,STAR> &x, DistMatrix<scalar_t,V
 }
 
 //template<typename scalar_t>
-int rsvd_test_t_func2(const DistMatrix<scalar_t,VR,STAR> &x, DistMatrix<scalar_t,VR,STAR> &y, DistMatrix<scalar_t,VR,STAR> *L,DistMatrix<scalar_t,VR,STAR> *D, DistMatrix<scalar_t,VR,STAR> *R){
+int rsvd_test_t_func2(const DistMatrix<scalar_t,VC,STAR> &x, DistMatrix<scalar_t,VC,STAR> &y, DistMatrix<scalar_t,VC,STAR> *L,DistMatrix<scalar_t,VC,STAR> *D, DistMatrix<scalar_t,VC,STAR> *R){
 
 	auto alpha = scalar_t(1.0);
 	auto beta  = scalar_t(0.0);
@@ -89,7 +89,7 @@ int rsvd_test_t_func2(const DistMatrix<scalar_t,VR,STAR> &x, DistMatrix<scalar_t
 	int N = R->Height();
 	Zeros(y,N,1);
 
-	DistMatrix<scalar_t,VR,STAR> temp(g);
+	DistMatrix<scalar_t,VC,STAR> temp(g);
 	Zeros(temp,L->Width(),1);
 
 	Gemv(ADJOINT,alpha,*L,x,temp);
@@ -101,7 +101,7 @@ int rsvd_test_t_func2(const DistMatrix<scalar_t,VR,STAR> &x, DistMatrix<scalar_t
 
 
 //template<class double>
-int rsvd_test_func(DistMatrix<double,VR,STAR> &x, DistMatrix<double,VR,STAR> &y, DistMatrix<double,VR,STAR> *A){
+int rsvd_test_func(DistMatrix<double,VC,STAR> &x, DistMatrix<double,VC,STAR> &y, DistMatrix<double,VC,STAR> *A){
 
 	const Grid& g = x.Grid();
 	mpi::Comm elcomm = g.Comm();
@@ -120,7 +120,7 @@ int rsvd_test_func(DistMatrix<double,VR,STAR> &x, DistMatrix<double,VR,STAR> &y,
 }
 
 //template<class double>
-int rsvd_test_t_func(DistMatrix<double,VR,STAR> &x, DistMatrix<double,VR,STAR> &y, DistMatrix<double,VR,STAR> *A){
+int rsvd_test_t_func(DistMatrix<double,VC,STAR> &x, DistMatrix<double,VC,STAR> &y, DistMatrix<double,VC,STAR> *A){
 	const Grid& g = x.Grid();
 	mpi::Comm elcomm = g.Comm();
 	MPI_Comm comm = elcomm.comm;
@@ -150,11 +150,11 @@ void test(const int m, const int n, const int k, int r, const int l, const int q
 
 	mpi::Comm comm = mpi::COMM_WORLD;
 	Grid g;
-	DistMatrix<scalar_t,VR,STAR> A(g);
-	DistMatrix<scalar_t,VR,STAR> D(g);
-	DistMatrix<scalar_t,VR,STAR> L(g);
-	DistMatrix<scalar_t,VR,STAR> R(g);
-	DistMatrix<scalar_t,VR,STAR> T(g);
+	DistMatrix<scalar_t,VC,STAR> A(g);
+	DistMatrix<scalar_t,VC,STAR> D(g);
+	DistMatrix<scalar_t,VC,STAR> L(g);
+	DistMatrix<scalar_t,VC,STAR> R(g);
+	DistMatrix<scalar_t,VC,STAR> T(g);
 
 
 	if(!mpi::Rank(comm)){
@@ -180,7 +180,7 @@ void test(const int m, const int n, const int k, int r, const int l, const int q
 	Gaussian(R,n,exact_rank);
 	qr::ExplicitUnitary(R);
 
-	DistMatrix<scalar_t,VR,STAR> L_copy = L;
+	DistMatrix<scalar_t,VC,STAR> L_copy = L;
 	DiagonalScale(RIGHT,NORMAL,D,L_copy);
 	Zeros(A,m,n);
 	Gemm(NORMAL,ADJOINT,alpha,L_copy,R,beta,A);
@@ -192,9 +192,9 @@ void test(const int m, const int n, const int k, int r, const int l, const int q
 	auto At_sf = std::bind(rsvd_test_t_func2,_1,_2,&L,&D,&R);
 
 
-	DistMatrix<scalar_t,VR,STAR> U(g);
-	DistMatrix<scalar_t,VR,STAR> S(g);
-	DistMatrix<scalar_t,VR,STAR> V(g);
+	DistMatrix<scalar_t,VC,STAR> U(g);
+	DistMatrix<scalar_t,VC,STAR> S(g);
+	DistMatrix<scalar_t,VC,STAR> V(g);
 	{ // compute the rsvd factorization
 		rsvd::RSVDCtrl ctrl;
 		ctrl.m=m;
@@ -231,8 +231,8 @@ void test(const int m, const int n, const int k, int r, const int l, const int q
 		if(!mpi::Rank(comm)) std::cout << "r="<< r << std::endl;
 		
 		{// check to see if the right and left singular matrices are orthogonal
-			DistMatrix<scalar_t,VR,STAR> I(g);
-			DistMatrix<scalar_t,VR,STAR> UtU(g);
+			DistMatrix<scalar_t,VC,STAR> I(g);
+			DistMatrix<scalar_t,VC,STAR> UtU(g);
 			Zeros(UtU,r,r);
 			Gemm(ADJOINT,NORMAL,alpha,U,U,beta,UtU);
 			Identity(I,r,r);
@@ -240,7 +240,7 @@ void test(const int m, const int n, const int k, int r, const int l, const int q
 			double ortho_diff = FrobeniusNorm(UtU)/FrobeniusNorm(I);
 			if(!mpi::Rank(comm)) std::cout << "||U*U - I||_F=" << ortho_diff << std::endl;
 
-			DistMatrix<scalar_t,VR,STAR> VtV(g);
+			DistMatrix<scalar_t,VC,STAR> VtV(g);
 			Zeros(VtV,r,r);
 			Gemm(ADJOINT,NORMAL,alpha,V,V,beta,VtV);
 			Axpy(-1.0,I,VtV);
@@ -249,10 +249,10 @@ void test(const int m, const int n, const int k, int r, const int l, const int q
 		}
 
 		for(int i=0;i<10;i++){ // test on some random inputs
-			DistMatrix<scalar_t,VR,STAR> x(g);
+			DistMatrix<scalar_t,VC,STAR> x(g);
 			Gaussian(x,n,1);
-			DistMatrix<scalar_t,VR,STAR> y_ex(m,1,g);
-			DistMatrix<scalar_t,VR,STAR> y_svd(m,1,g);
+			DistMatrix<scalar_t,VC,STAR> y_ex(m,1,g);
+			DistMatrix<scalar_t,VC,STAR> y_svd(m,1,g);
 
 			//ApplySVD(L,D,R,x,y_ex);
 			Zeros(y_ex,m,1);
@@ -265,8 +265,8 @@ void test(const int m, const int n, const int k, int r, const int l, const int q
 
 			// and test the reverse
       Gaussian(x,m,1);
-      DistMatrix<scalar_t,VR,STAR> z_ex(n,1,g);
-      DistMatrix<scalar_t,VR,STAR> z_svd(n,1,g);
+      DistMatrix<scalar_t,VC,STAR> z_ex(n,1,g);
+      DistMatrix<scalar_t,VC,STAR> z_svd(n,1,g);
 
       //ApplySVD(L,D,R,x,y_ex);
       Zeros(z_ex,m,1);
@@ -283,8 +283,8 @@ void test(const int m, const int n, const int k, int r, const int l, const int q
 		auto v1 = LockedView(V,0,0,n,1);
 		auto u1 = LockedView(U,0,0,m,1);
 		auto s_1 = S.Get(0,0);
-		DistMatrix<scalar_t,VR,STAR> temp1(m,1,g);
-		DistMatrix<scalar_t,VR,STAR> temp2(m,1,g);
+		DistMatrix<scalar_t,VC,STAR> temp1(m,1,g);
+		DistMatrix<scalar_t,VC,STAR> temp2(m,1,g);
 		Zeros(temp2,m,1);
 		ApplySVD(L,D,R,v1,temp1);
 		Axpy(s_1,u1,temp2);
@@ -314,8 +314,8 @@ void test(const int m, const int n, const int k, int r, const int l, const int q
 		if(!mpi::Rank(comm)) std::cout << "||D-S||/||D||=" << sing_diff << std::endl;
 
 		{// compare to full svd
-			DistMatrix<double,VR,STAR> S_ex(g);
-			DistMatrix<scalar_t,VR,STAR> V_ex(g);
+			DistMatrix<double,VC,STAR> S_ex(g);
+			DistMatrix<scalar_t,VC,STAR> V_ex(g);
 
 			// compute the exact svd and then report that time
 			double svd_start = mpi::Time();
