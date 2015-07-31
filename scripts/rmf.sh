@@ -14,7 +14,7 @@ do
 			do
 			for L in 10
 			do
-			for NODES in 1 2 3 4 6 8
+			for NODES in 1
 			do
 				for Q in 0
 				do
@@ -43,7 +43,7 @@ cat <<-EOS | sbatch
 				#SBATCH -A PADAS
 
 				cd ~/projects/rsvd/build/
-				ibrun ./rsvd_test --m $M --n $N --r $R --d $D --l $L --tol $TOL --adap ADAP --orient NORMAL --max_rank 500 --k 500 -q $Q
+				ibrun ./rsvd_test --m $M --n $N --r $R --d $D --l $L --tol $TOL --adap ADAP --orient ADJOINT --max_rank 500 --k 500 -q $Q
 
 				exit 0
 				EOS
