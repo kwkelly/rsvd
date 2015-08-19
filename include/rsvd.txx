@@ -97,7 +97,7 @@ void rsvd(DistMatrix<T,El::VC,El::STAR> &U, DistMatrix<T,El::VC,El::STAR> &s, Di
 				Gemm(El::NORMAL,El::NORMAL,alpha,Q,C,beta,D);
 				Axpy(-1.0,Y,D);
 				Base<T> s_diff = TwoNormEstimate(D);
-				err_est = std::pow(s_diff,1.0/(q+1));
+				err_est = std::pow(s_diff/s_1,1.0/(q+1));
 				//std::cout << err_est << std::endl;
 				R_old = R;
 				if(err_est > tol){
@@ -205,7 +205,7 @@ void rsvd(DistMatrix<T,El::VC,El::STAR> &U, DistMatrix<T,El::VC,El::STAR> &s, Di
 				Gemm(El::NORMAL,El::NORMAL,alpha,Q,C,beta,D);
 				Axpy(-1.0,Y,D);
 				Base<T> s_diff = TwoNormEstimate(D);
-				err_est = std::pow(s_diff,1.0/(q+1));
+				err_est = std::pow(s_diff/s_1,1.0/(q+1));
 
 				R_old = R;
 				if(err_est > tol){
