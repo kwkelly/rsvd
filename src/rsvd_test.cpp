@@ -208,7 +208,7 @@ void test(const int m, const int n, const int k, int r, const int l, const int q
 		ctrl.adap=adap;
 		ctrl.orientation=orientation;
 
-		for(int i=0;i<100;i++){
+		for(int i=0;i<1;i++){
 			if(!mpi::Rank(comm)) std::cout << "rsvd" << std::endl;
 			ctrl.r = r_orig;
 			U.Empty();
