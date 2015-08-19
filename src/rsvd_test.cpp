@@ -171,7 +171,7 @@ void test(const int m, const int n, const int k, int r, const int l, const int q
 	int r_orig = r;
 
 	D.Resize(exact_rank,1);
-	auto expfill = [&d]( Int i, Int j )->scalar_t{ return Pow(d,i); };
+	auto expfill = [&d]( Int i, Int j )->scalar_t{ return i==0 ? 1000 : Pow(d,i); };
 	IndexDependentFill( D, std::function<scalar_t(Int,Int)>(expfill) );
 
 	Gaussian(L,m,exact_rank);

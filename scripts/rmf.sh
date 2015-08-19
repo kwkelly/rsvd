@@ -2,7 +2,7 @@
 MAX_QUEUE=20
 WAIT_TIME=120
 MAX_TIME=00:10:00
-TOL=0.00000001
+TOL=0.001
 
 for M in 1000
 do
@@ -10,7 +10,7 @@ do
 	do
 		for R in 25
 		do
-			for D in 0.90
+			for D in 0.95
 			do
 			for L in 10
 			do
